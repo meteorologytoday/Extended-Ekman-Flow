@@ -56,8 +56,8 @@ module FlowSolver
         Tx_∂z_Wx = spdiagm( 0 => 1 ./ dz_Tx ) * (bmo_x.T_DN_W - bmo_x.T_UP_W)
         W_∂z_Tx  = W_reduce_Wx * spdiagm( 0 => 1 ./ dz_Wx )  * (bmo_x.W_DN_T - bmo_x.W_UP_T)
 
-        #T_∂z_W = spdiagm( 0 => 1 ./ dz_T ) * (bmo.T_DN_W - bmo.T_UP_W)
-        #W_∂z_T = spdiagm( 0 => 1 ./ dz_W ) * W_rmbnd_W * (bmo.W_DN_T - bmo.W_UP_T)
+        T_∂z_W = spdiagm( 0 => 1 ./ dz_T ) * (bmo.T_DN_W - bmo.T_UP_W)
+        W_∂z_T = spdiagm( 0 => 1 ./ dz_W ) * W_rmbnd_W * (bmo.W_DN_T - bmo.W_UP_T)
 
         #W_∂z2_W = W_∂z_T * T_∂z_W
         
@@ -72,6 +72,8 @@ module FlowSolver
 
 
         return (
+            T_∂z_W = T_∂z_W,
+            W_∂z_T = W_∂z_T,
             Tx_∂z_Wx = Tx_∂z_Wx,
             W_∂z_Tx  = W_∂z_Tx,
             W_∂z2_W = W_∂z2_W,
@@ -84,7 +86,6 @@ module FlowSolver
         )
 
     end
-
 
     function solve(
         RHS :: AbstractArray{Float64, 1},  # It should have W pts.
@@ -128,6 +129,8 @@ module FlowSolver
         
         op_LHS[end, end]      = 1.0
         op_LHS[end, 1:end-1] .= 0.0
+
+        dropzeros!(op_LHS)
 
         RHS_adjust = RHS - K2 * Δ * ( MΔ * MΔ * B0 + MΔ * B2 + B4) - f2 * Δ * B0
 
