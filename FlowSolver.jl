@@ -22,12 +22,35 @@ module FlowSolver
         bmo   = MatrixOperators(;Ny=1, Nx=1, Nz=Nz  )
         bmo_x = MatrixOperators(;Ny=1, Nx=1, Nz=Nz+2)   # x = extension grid
 
-        # Be aware that idx is reusable        
+        # Be aware that idx is reusable
+        extrapolate_scheme = "0th" # "0th"
+
         idx = zeros(Int64, bmo_x.W_pts)
-        idx[1] = 1
         idx[2:end-1] .= collect(1:bmo.W_pts)
-        idx[end] = idx[end-1]
+        idx[1] = 1
+        idx[end] = bmo.W_pts
+        
         Wx_extrapolate_W = bmo.W_I_W[idx, :]
+       
+        println("extrapolate_scheme = $extrapolate_scheme") 
+        if extrapolate_scheme == "0th"
+
+            Wx_extrapolate_W[1,       1] = 1
+            Wx_extrapolate_W[end, end-1] = 1
+
+        elseif extrapolate_scheme == "1th"
+
+            # (x - (y-x)) x y  => 2x - y
+            Wx_extrapolate_W[1,       1] =  2
+            Wx_extrapolate_W[1,       2] = -1
+            
+            # x y (y + (y-x)) => 2y - x 
+            Wx_extrapolate_W[bmo_x.W_pts, bmo.W_pts]   =  2
+            Wx_extrapolate_W[bmo_x.W_pts, bmo.W_pts-1] = -1
+
+        else
+            throw(ErrorException("Unknown extrapolate_scheme : `$extrapolate_scheme`"))
+        end
 
         idx = collect(2:bmo_x.W_pts-1)
         W_reduce_Wx = bmo_x.W_I_W[idx, :]
